@@ -1,0 +1,21 @@
+name: porder
+channels:
+  - defaults
+dependencies:
+  - fiona
+  - gdal
+  - geopandas
+  - jupyter
+  - matplotlib
+  - notebook
+  - numpy=1.17.4
+  - pandas
+  - pip
+  - python=3.7
+  - rasterio
+  - tqdm
+  - urllib3
+  - yaml
+  - pip:
+    - pipwin
+    - porder
