@@ -51,6 +51,11 @@ def download_planet_order(df, index, download_dir):
     print(s_dl)
     os.system(s_dl)
 
+def get_basedir(unzip_path, product_types =['PSScene4Band', 'PSOrthoTile']):
+    for product_type in product_types:
+        ds_list = [d for d in list(unzip_path.glob('**')) if d.stem == 'PSScene4Band']
+        if len(ds_list) > 0:
+            return ds_list[0], product_type
 
 def unzip_PSOrthoTileOrder(zip_file, 
                            target_dir=None, 
@@ -59,24 +64,30 @@ def unzip_PSOrthoTileOrder(zip_file,
     """
     
     """
+    print("Start extracting files")
     unzip_path = zip_file.parent / zip_file.name.rstrip('.zip')
-
     with zipfile.ZipFile(zip_file, 'r') as zip_ref:
         zip_ref.extractall(unzip_path)
-
-    base = [d for d in list(unzip_path.glob('**')) if d.stem == 'PSOrthoTile'][0]
+    
+    # split here for OrthoTile vs Scene order
+    base, product_type = get_basedir(unzip_path)
 
     datasets = list(base.glob('*'))
-
+    
+    print("Reordering Datasets")
     for ds in datasets:
         #print(ds)
-        for f in ds.glob('analytic_sr_udm2/*'):
-            shutil.move(str(f), str(ds))
-        shutil.rmtree(str(ds / 'analytic_sr_udm2'))
-        if not target_dir:
-            shutil.move(str(ds), str(unzip_path))
+        files = list(ds.glob('analytic_sr_udm2/*'))
+        if len(files) > 0:
+            for f in files:
+                shutil.move(str(f), str(ds))
+            shutil.rmtree(str(ds / 'analytic_sr_udm2'))
+            if not target_dir:
+                shutil.move(str(ds), str(unzip_path))
+            else:
+                shutil.move(str(ds), str(Path(target_dir)))
         else:
-            shutil.move(str(ds), str(Path(target_dir)))
+            print(f'{ds}: No analytic_sr_udm2 product available')
 
     shutil.rmtree(unzip_path / 'files')
     
