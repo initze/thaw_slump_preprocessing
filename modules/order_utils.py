@@ -51,11 +51,6 @@ def download_planet_order(df, index, download_dir):
     print(s_dl)
     os.system(s_dl)
 
-def get_basedir(unzip_path, product_types =['PSScene4Band', 'PSOrthoTile']):
-    for product_type in product_types:
-        ds_list = [d for d in list(unzip_path.glob('**')) if d.stem == 'PSScene4Band']
-        if len(ds_list) > 0:
-            return ds_list[0], product_type
 
 def unzip_PSOrthoTileOrder(zip_file, 
                            target_dir=None, 
@@ -64,30 +59,24 @@ def unzip_PSOrthoTileOrder(zip_file,
     """
     
     """
-    print("Start extracting files")
     unzip_path = zip_file.parent / zip_file.name.rstrip('.zip')
+
     with zipfile.ZipFile(zip_file, 'r') as zip_ref:
         zip_ref.extractall(unzip_path)
-    
-    # split here for OrthoTile vs Scene order
-    base, product_type = get_basedir(unzip_path)
+
+    base = [d for d in list(unzip_path.glob('**')) if d.stem == 'PSOrthoTile'][0]
 
     datasets = list(base.glob('*'))
-    
-    print("Reordering Datasets")
+
     for ds in datasets:
         #print(ds)
-        files = list(ds.glob('analytic_sr_udm2/*'))
-        if len(files) > 0:
-            for f in files:
-                shutil.move(str(f), str(ds))
-            shutil.rmtree(str(ds / 'analytic_sr_udm2'))
-            if not target_dir:
-                shutil.move(str(ds), str(unzip_path))
-            else:
-                shutil.move(str(ds), str(Path(target_dir)))
+        for f in ds.glob('analytic_sr_udm2/*'):
+            shutil.move(str(f), str(ds))
+        shutil.rmtree(str(ds / 'analytic_sr_udm2'))
+        if not target_dir:
+            shutil.move(str(ds), str(unzip_path))
         else:
-            print(f'{ds}: No analytic_sr_udm2 product available')
+            shutil.move(str(ds), str(Path(target_dir)))
 
     shutil.rmtree(unzip_path / 'files')
     
@@ -114,3 +103,19 @@ def check_zipcontent_exists(zip_file, tiles_dir):
                 continue
     return np.all(l)
 
+def get_existing_files(DATA_DIR):
+    """retrieve existing datasets"""
+    def get_parts(row):
+        row['tile_id', 'dataset_id', 'file_name'] = row['full_path'].parts[-3:]
+
+    def calc_filesize(row):
+        return row.full_path.stat().st_size
+    #### create filelist
+    flist = list(DATA_DIR.glob('*/*/*.tif'))
+    df_existing = pd.DataFrame(columns=['full_path', 'tile_id', 'dataset_id', 'file_name'])
+    df_existing['full_path'] = flist
+
+    #### get image name parts
+
+    %time _ = df_existing.apply(get_parts, axis=1)
+    return df_existing
